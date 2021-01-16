@@ -30,7 +30,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
-
+#include <assert.h>
 #include "libreprl.h"
 
 // Well-known file descriptor numbers for reprl <-> child communication, child process side
@@ -366,8 +366,10 @@ int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script
         int status;
         if (waitpid(ctx->pid, &status, WNOHANG) == ctx->pid) {
             reprl_child_terminated(ctx);
-            if (WIFEXITED(status)) {
+            if (WIFEXITED(status) && WEXITSTATUS(status) != 122) {
                 return reprl_error(ctx, "Child unexpectedly exited with status %i between executions", WEXITSTATUS(status));
+            } else if (WIFEXITED(status) && WEXITSTATUS(status) == 122){
+                return reprl_error(ctx, "Child unexpectedly terminated with signal %i between executions",  1);
             } else {
                 return reprl_error(ctx, "Child unexpectedly terminated with signal %i between executions", WTERMSIG(status));
             }
@@ -416,14 +418,17 @@ int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script
         // Cleanup any state related to this child process.
         reprl_child_terminated(ctx);
 
-        if (WIFEXITED(status)) {
+        if (WIFEXITED(status) && (WEXITSTATUS(status)) != 122) {
             status = WEXITSTATUS(status) << 8;
+        } else if (WIFEXITED(status) &&  (WEXITSTATUS(status)) == 122){
+            status = 6;
         } else if (WIFSIGNALED(status)) {
             status = WTERMSIG(status);
         } else {
             // This shouldn't happen, since we don't specify WUNTRACED for waitpid...
             return reprl_error(ctx, "Waitpid returned unexpected child state %i", status);
         }
+        
     }
     
     // The status must be a positive number, see the status encoding format below.

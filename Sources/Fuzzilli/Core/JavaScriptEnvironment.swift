@@ -41,7 +41,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     public let interestingStrings = jsTypeNames
 
     // TODO more?
-    public let interestingRegExps = [".", "\\d", "\\w", "\\s", "\\D", "\\W", "\\S"]
+    public let interestingRegExps = [".", "+", "^",  "-", "$", "\\d", "\\w", "\\s", "\\D", "\\W", "\\S", "\\B", "\\b"]
     public let interestingRegExpQuantifiers = ["*", "+", "?"]
 
     public var intType = Type.integer
@@ -144,12 +144,12 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerBuiltin("Reflect", ofType: .jsReflectObject)
         registerBuiltin("isNaN", ofType: .jsIsNaNFunction)
         registerBuiltin("isFinite", ofType: .jsIsFiniteFunction)
-        //registerBuiltin("escape:", ofType: .jsEscapeFunction)
-        //registerBuiltin("unescape:", ofType: .jsUnescapeFunction)
-        //registerBuiltin("decodeURI:", ofType: .jsDecodeURIFunction)
-        //registerBuiltin("decodeURIComponent:", ofType: .jsDecodeURIComponentFunction)
-        //registerBuiltin("encodeURI:", ofType: .jsEncodeURIFunction)
-        //registerBuiltin("encodeURIComponent:", ofType: .jsEncodeURIComponentFunction)
+        registerBuiltin("escape", ofType: .jsEscapeFunction)
+        registerBuiltin("unescape", ofType: .jsUnescapeFunction)
+        registerBuiltin("decodeURI", ofType: .jsDecodeURIFunction)
+        registerBuiltin("decodeURIComponent", ofType: .jsDecodeURIComponentFunction)
+        registerBuiltin("encodeURI", ofType: .jsEncodeURIFunction)
+        registerBuiltin("encodeURIComponent", ofType: .jsEncodeURIComponentFunction)
         registerBuiltin("eval", ofType: .jsEvalFunction)
         registerBuiltin("parseInt", ofType: .jsParseIntFunction)
         registerBuiltin("parseFloat", ofType: .jsParseFloatFunction)
@@ -287,7 +287,7 @@ public struct ObjectGroup {
 public extension Type {
     /// Type of a string in JavaScript.
     /// A JS string is both a string and an object on which methods can be called.
-    static let jsString = Type.string + Type.iterable + Type.object(ofGroup: "String", withProperties: ["__proto__", "constructor", "length"], withMethods: ["charAt", "charCodeAt", "codePointAt", "concat", "includes", "endsWith", "indexOf", "lastIndexOf", "match", "matchAll", "padEnd", "padStart", "repeat", "replace", "replaceAll", "search", "slice", "split", "startsWith", "substring", "trim"])
+    static let jsString = Type.string + Type.iterable + Type.object(ofGroup: "String", withProperties: ["__proto__", "constructor", "length"], withMethods: ["charAt", "charCodeAt", "codePointAt", "concat", "includes", "endsWith", "indexOf", "lastIndexOf", "match", "matchAll", "padEnd", "padStart", "repeat", "replace", "replaceAll", "search", "slice", "split", "startsWith", "substring", "trim", "normalize"])
 
     /// Type of a regular expression in JavaScript.
     /// A JS RegExp is both a RegExp and an object on which methods can be called.
@@ -467,7 +467,7 @@ public extension ObjectGroup {
             "lastIndexOf" : [.anything, .opt(.integer)] => .integer,
             "match"       : [.regexp] => .jsString,
             "matchAll"    : [.regexp] => .jsString,
-            //"normalize"   : [.string] => .jsString),
+            "normalize"   : [.string] => .jsString,
             "padEnd"      : [.integer, .opt(.string)] => .jsString,
             "padStart"    : [.integer, .opt(.string)] => .jsString,
             "repeat"      : [.integer] => .jsString,

@@ -40,9 +40,7 @@ extension FuzzEngine {
                 stats.producedValidSample()
 
             case .failed(_):
-                if fuzzer.config.enableDiagnostics {
-                    program.comments.add("Stdout:\n" + execution.stdout, at: .footer)
-                }
+                program.comments.add("Stdout:\n" + execution.stdout, at: .footer)
                 fuzzer.dispatchEvent(fuzzer.events.InvalidProgramFound, data: program)
                 stats.producedInvalidSample()
 
@@ -51,10 +49,8 @@ extension FuzzEngine {
                 stats.producedInvalidSample()
         }
 
-        if fuzzer.config.enableDiagnostics {
-            // Ensure deterministic execution behaviour. This can for example help detect and debug REPRL issues.
-            ensureDeterministicExecutionBehaviour(of: program, firstExecution: execution)
-        }
+        // Ensure deterministic execution behaviour. This can for example help detect and debug REPRL issues.
+        ensureDeterministicExecutionBehaviour(of: program, firstExecution: execution)
 
         return execution.outcome
     }

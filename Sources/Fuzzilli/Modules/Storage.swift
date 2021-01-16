@@ -41,6 +41,7 @@ public class Storage: Module {
         self.statisticsDir = storageDir + "/stats"
         self.stateFile = storageDir + "/state.bin"
         self.diagnosticsDir = storageDir + "/diagnostics"
+        print(self.diagnosticsDir)
 
         self.statisticsExportInterval = statisticsExportInterval
 
@@ -54,11 +55,9 @@ public class Storage: Module {
             try FileManager.default.createDirectory(atPath: duplicateCrashesDir, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(atPath: corpusDir, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(atPath: statisticsDir, withIntermediateDirectories: true)
-            if fuzzer.config.enableDiagnostics {
                 try FileManager.default.createDirectory(atPath: failedDir, withIntermediateDirectories: true)
                 try FileManager.default.createDirectory(atPath: timeOutDir, withIntermediateDirectories: true)
                 try FileManager.default.createDirectory(atPath: diagnosticsDir, withIntermediateDirectories: true)
-            }
         } catch {
             logger.fatal("Failed to create storage directories. Is \(storageDir) writable by the current user?")
         }
@@ -77,22 +76,23 @@ public class Storage: Module {
             self.storeProgram(ev.program, as: filename, in: self.corpusDir)
         }
 
-        if fuzzer.config.enableDiagnostics {
-            fuzzer.registerEventListener(for: fuzzer.events.DiagnosticsEvent) { ev in
-                let filename = "\(self.formatDate())_\(ev.name)_\(String(currentMillis()))"
-                let url = URL(fileURLWithPath: self.diagnosticsDir + filename + ".diag")
-                self.createFile(url, withContent: ev.content)
-            }
+        fuzzer.registerEventListener(for: fuzzer.events.DiagnosticsEvent) { ev in
+            print(3)
+            let filename = "/\(self.formatDate())_\(ev.name)_\(String(currentMillis()))"
+            let url = URL(fileURLWithPath: self.diagnosticsDir + filename + ".diag")
+            self.createFile(url, withContent: ev.content)
+        }
 
-            fuzzer.registerEventListener(for: fuzzer.events.InvalidProgramFound) { program in
-                let filename = "program_\(self.formatDate())_\(program.id)"
-                self.storeProgram(program, as: filename, in: self.failedDir)
-            }
 
-            fuzzer.registerEventListener(for: fuzzer.events.TimeOutFound) { program in
-                let filename = "program_\(self.formatDate())_\(program.id)"
-                self.storeProgram(program, as: filename, in: self.timeOutDir)
-            }
+        fuzzer.registerEventListener(for: fuzzer.events.InvalidProgramFound) { program in
+            let filename = "program_\(self.formatDate())_\(program.id)"
+            self.storeProgram(program, as: filename, in: self.failedDir)
+        }
+
+        fuzzer.registerEventListener(for: fuzzer.events.TimeOutFound) { program in
+            print(1)
+            let filename = "program_\(self.formatDate())_\(program.id)"
+            self.storeProgram(program, as: filename, in: self.timeOutDir)
         }
 
         // If enabled, export fuzzing statistics to disk in regular intervals.

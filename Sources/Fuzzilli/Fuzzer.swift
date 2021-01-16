@@ -382,9 +382,9 @@ public class Fuzzer {
         assert(runner.isInitialized)
 
         let script = lifter.lift(program, withOptions: .minify)
-
         dispatchEvent(events.PreExecute, data: program)
         let execution = runner.run(script, withTimeout: timeout ?? config.timeout)
+
         dispatchEvent(events.PostExecute, data: execution)
 
         return execution
@@ -440,15 +440,11 @@ public class Fuzzer {
                 }
             } catch {
                 logger.warning("Could not deserialize runtime types: \(error)")
-                if config.enableDiagnostics {
-                    logger.warning("Fuzzout:\n\(fuzzout)")
-                }
+                logger.warning("Fuzzout:\n\(fuzzout)")
             }
         } else {
             logger.warning("Execution for type collection did not succeeded, outcome: \(execution.outcome)")
-            if config.enableDiagnostics, case .failed = execution.outcome {
-                logger.warning("Stdout:\n\(execution.stdout)")
-            }
+            logger.warning("Stdout:\n\(execution.stdout)")
         }
         // Save result of runtime types collection to Program
         program.typeCollectionStatus = TypeCollectionStatus(from: execution.outcome)
@@ -621,6 +617,7 @@ public class Fuzzer {
             b = makeBuilder()
             b.eval(test)
             execution = execute(b.finalize())
+            print(execution.stderr)
             guard case .crashed = execution.outcome else {
                 logger.fatal("Testcase \"\(test)\" did not crash")
             }

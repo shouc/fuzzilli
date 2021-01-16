@@ -51,6 +51,8 @@ public class REPRL: ComponentBase, ScriptRunner {
         for (key, value) in processEnvironment {
             env.append(key + "=" + value)
         }
+            env.append("ASAN_OPTIONS=exitcode=133")
+
     }
 
     override func initialize() {
@@ -62,7 +64,7 @@ public class REPRL: ComponentBase, ScriptRunner {
         let argv = convertToCArray(processArguments)
         let envp = convertToCArray(env)
 
-        if reprl_initialize_context(reprlContext, argv, envp, /* capture_stdout: */ fuzzer.config.enableDiagnostics ? 1 : 0, /* capture stderr: */ 1) != 0 {
+        if reprl_initialize_context(reprlContext, argv, envp, 1, /* capture stderr: */ 1) != 0 {
             logger.fatal("Failed to initialize REPRL context: \(String(cString: reprl_get_last_error(reprlContext)))")
         }
 
@@ -80,9 +82,7 @@ public class REPRL: ComponentBase, ScriptRunner {
 
     public func run(_ script: String, withTimeout timeout: UInt32) -> Execution {
         // Log the current script into the buffer if diagnostics are enabled.
-        if fuzzer.config.enableDiagnostics {
-            self.scriptBuffer += script + "\n"
-        }
+        self.scriptBuffer += script + "\n"
 
         lastExecId += 1
 
@@ -99,25 +99,23 @@ public class REPRL: ComponentBase, ScriptRunner {
         if execsSinceReset > maxExecsBeforeRespawn {
             freshInstance = 1
             execsSinceReset = 0
-            if fuzzer.config.enableDiagnostics {
-                scriptBuffer.removeAll(keepingCapacity: true)
-            }
+            scriptBuffer.removeAll(keepingCapacity: true)
         }
 
         var execTime: UInt64 = 0        // In microseconds
-        let timeout = UInt64(timeout) * 1000        // In microseconds
+        let timeout = UInt64(timeout) * 10000        // In microseconds
         var status: Int32 = 0
         script.withCString {
             status = reprl_execute(reprlContext, $0, UInt64(script.count), UInt64(timeout), &execTime, freshInstance)
+
             // If we fail, we retry after a short timeout and with a fresh instance. If we still fail, we give up trying
             // to execute this program. If we repeatedly fail to execute any program, we abort.
             if status < 0 {
                 logger.warning("Script execution failed: \(String(cString: reprl_get_last_error(reprlContext))). Retrying in 1 second...")
-                if fuzzer.config.enableDiagnostics {
-                    fuzzer.dispatchEvent(fuzzer.events.DiagnosticsEvent, data: (name: "REPRLFail", content: scriptBuffer))
-                }
+                fuzzer.dispatchEvent(fuzzer.events.DiagnosticsEvent, data: (name: "REPRLFail", content: scriptBuffer))
                 sleep(1)
                 status = reprl_execute(reprlContext, $0, UInt64(script.count), UInt64(timeout), &execTime, 1)
+
             }
         }
 
@@ -132,7 +130,6 @@ public class REPRL: ComponentBase, ScriptRunner {
             return execution
         }
         recentlyFailedExecutions = 0
-
         if RIFEXITED(status) != 0 {
             let code = REXITSTATUS(status)
             if code == 0 {
